@@ -7,6 +7,12 @@ use dokuwiki\Extension\SyntaxPlugin;
  *
  * @license GPL 2 http://www.gnu.org/licenses/gpl-2.0.html
  * @author Hans-Nikolai Viessmann <hans@viess.mn>
+ *
+ * This Syntax plugin is inspired by the deprecated publistf Dokuwiki plugin, and
+ * tries to recreate the same output using a BibBrowser
+ * (https://github.com/monperrus/bibtexbrowser) Bibtex processing script.
+ *
+ * Templating is handled through the BB4DWTemplating class.
  */
 
 /**
@@ -14,11 +20,6 @@ use dokuwiki\Extension\SyntaxPlugin;
  */
 $_GET['library'] = 1; // cause BibBrowser to run in 'library' mode
 define('BIBTEXBROWSER_BIBTEX_LINKS', false); // disable links back to bibtex
-define('BIBTEXBROWSER_USE_PROGRESSIVE_ENHANCEMENT', false); // disable Javascript
-
-// XXX this is just for initial testing before we add our own templating
-define('BIBTEXBROWSER_LAYOUT','none');
-define('BIBLIOGRAPHYSTYLE','JanosBibliographyStyle');
 
 class syntax_plugin_bb4dw extends SyntaxPlugin
 {
@@ -53,7 +54,7 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
         $data['groups'] = [];
 
         // set default config
-        $data['config'] = ['groupby' => 'year'];
+        $data['config'] = ['target' => 'wiki', 'usegroup' => true, 'groupby' => 'year', 'order' => 'newest'];
 
         require_once(dirname(__FILE__).'/bibtexbrowser.php');
         global $db;
@@ -62,21 +63,23 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
         $db->load(dirname(__FILE__).'/sample.bib');
         dbg("loading worked!");
 
-        // get all entries (FIXME is there a better way?)
-        $query = array('year'=>'.*');
-        $data['raw'] = $db->multisearch($query);
-        dbg("filtering worked!");
-
+        // get all entries and sort (internally the default is by year)
+        $data['raw'] = $db->getEntries();
         uasort($data['raw'], 'compare_bib_entries');
+
+        $groupby_func = '';
+        switch($data['config']['groupby']) {
+            case 'year':
+                $groupby_func = 'getYear';
+                break;
+            default:
+                msg('Unknown groupby passed!', -1);
+                die();
+                break;
+        }
+
         foreach ($data['raw'] as $entry) {
-            switch($data['config']['groupby']) {
-                case 'year':
-                    $groupby = $entry->getYear();
-                    break;
-                default:
-                    msg('Unknown groupby passed!', -1);
-                    break;
-            }
+            $groupby = $entry->$groupby_func();
             if (empty($data['groups'][$groupby]))
                 $data['groups'][$groupby] = [$entry];
             else
@@ -95,15 +98,27 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
         // activate caching of results
         $renderer->info['cache'] = 0;
 
-        // FIXME this is just a prototype to show it working!
-        foreach ($data['groups'] as $groupby => $group) {
-            $renderer->doc .= '<h2>'.$groupby.'</h2>';
-            $renderer->doc .= '<ul>';
-            foreach ($group as $entry) {
-              $renderer->doc .= '<li>'.$entry->toHTML().'</li>';
-            }
-            $renderer->doc .= '</ul>';
+        if ($data['config']['order'] == 'newest')
+            $data['groups'] = array_reverse($data['groups'], true);
+
+        $tpl = <<<TEMPLATE
+        @{group@
+        === @groupkey@ ===
+        @{entry@
+          * @?summary@<popover placement="top" trigger="hover" title="@title@" content="@summary@">@;summary@ **@title@** @author@ (@?year@@?month@@month@ @;month@@year@@;year@). @?booktitle@In //@booktitle@//.@;booktitle@ @?journal@//@journal@//@?volume@ @volume@@?number@ (@number@)@;number@@;volume@ @;journal@ @?pages@ pp. @pages@.@;pages@ @?institution@ //@institution@//.@;institution@@?publisher@ @publisher@.@;publisher@ @?address@ @address@.@;address@@?summary@</popover>@;summary@ @?doi@<button type="link" size="xs" icon="fa fa-book">[[http://dx.doi.org/@doi@|DOI]]</button>@;doi@@?url@{{publications:pdf:@url@?linkonly}}@;url@ @?bibtex@<button collapse="b_@globalkey@_@groupid@_@key@" type="link" size="xs" icon="fa fa-file-text">BibTex</button>@;bibtex@@?abstract@<button collapse="a_@globalkey@_@groupid@_@key@" type="link" size="xs" icon="fa fa-comment">Abstract</button>@;abstract@ @?bibtex@<collapse id="b_@globalkey@_@groupid@_@key@" collapsed="true"><code bibtex>@bibtex@</code></collapse>@;bibtex@ @?abstract@<collapse id="a_@globalkey@_@groupid@_@key@" collapsed="true"><well size="sm">@abstract@</well></collapse>@;abstract@
+        @}entry@
+        @}group@
+        TEMPLATE;
+
+        require_once(dirname(__FILE__).'/templating.php');
+        $bb4dw_tpl_class = new BB4DWTemplating();
+        $proc_tpl = $bb4dw_tpl_class->process_template($tpl, $data);
+
+        if ($data['config']['target'] == 'wiki') {
+            $proc_tpl = p_render($mode, p_get_instructions($proc_tpl), $info);
         }
+
+        $renderer->doc .= $proc_tpl;
 
         return true;
     }
