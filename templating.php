@@ -12,10 +12,12 @@
  *
  * At its core, this class resolves a template of the format:
  *
- * ```text
+ * ```
  * @{group@
  * === @groupkey@ ===
  * @{entry@
+ *   # further tokens like
+ *   @key@ @title@ @author@
  * @}entry@
  * @}group@
  * ```
@@ -95,8 +97,8 @@ class BB4DWTemplating
         while ( !empty($entry_tpl) ) {
             // Translate all entries
             $entries_res = '';
-            foreach ($group as $entry) {
-                $entries_res .= $this->process_tpl_entry($entry, $entry_tpl[1]);
+            foreach ($group as $entryfields) {
+                $entries_res .= $this->process_tpl_entry($entryfields, $entry_tpl[1]);
             }
 
             $result = preg_replace($pattern, $entries_res, $result, 1);
@@ -113,17 +115,17 @@ class BB4DWTemplating
      * @param string $tpl The template to be processed
      * @return string The processed template for the group
      */
-    private function process_tpl_entry(BibEntry $entry, string $tpl): string {
+    private function process_tpl_entry(array $entryfields, string $tpl): string {
         $result = $tpl;
 
         // Resolve all conditions
-        $result = $this->resolve_conditions($entry->getFields(), $result);
+        $result = $this->resolve_conditions($entryfields, $result);
 
         // Replace all possible unconditional fields
         $patterns = [];
         $replacements = [];
 
-        foreach ($entry->getFields() as $key => $value) {
+        foreach ($entryfields as $key => $value) {
             //if ( $key === 'author' ) {
             //    $value = $entry['niceauthor'];
             //    $value = $this->authorlink($value);
