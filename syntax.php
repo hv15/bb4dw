@@ -55,11 +55,13 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
         $data = [
             'error' => false,
             'groups' => [],
+            'bibtex' => [],
+            'template' => [],
             'raw' => [],
-            'config' => ['target' => 'wiki',
+            'config' => ['target' => 'dokuwiki',
                          'usegroup' => true,
                          'groupby' => 'year', # call also be 'none', 'author', or 'title'
-                         'order' => 'newest'],
+                         'order' => 'newest'], # or 'descending'
         ];
 
         // parse the bb4dw plugin pattern
@@ -72,6 +74,27 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
             // capture matches in config
             $data['bibtex'] = ['type' => $matches[1], 'ref' => $matches[2]];
             $data['template'] = ['type' => $matches[3], 'ref' => $matches[4]];
+
+            if (!empty($matches[5])) {
+               $matches = explode('|', $matches[5]);
+               foreach ( $matches as $opt ) {
+                 $optparts = array();
+                 if (preg_match('/(.+?)=(.+)/', $opt, $optparts) ) {
+                    $optparts[2] = explode(';', $optparts[2]);
+                    $option = array();
+                    foreach ($optparts[2] as $single) {
+                        $single = explode('=', $single);
+                        if (count($single) == 1 && count($optparts[2]) == 1) {
+                            $option = $single[0];
+                        }
+                        else {
+                            $option[$single[0]] = str_replace(',', '|', $single[1]);
+                        }
+                    }
+                    $data['config'][$optparts[1]] = $option;
+                 }
+               }
+            }
 
             // init BibBrowser library
             require_once(dirname(__FILE__).'/bibtexbrowser.php');
@@ -141,7 +164,7 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
         $bb4dw_tpl_class = new BB4DWTemplating();
         $proc_tpl = $bb4dw_tpl_class->process_template($tpl, $data);
 
-        if ($data['config']['target'] == 'wiki') {
+        if ($data['config']['target'] == 'dokuwiki') {
             $proc_tpl = p_render($mode, p_get_instructions($proc_tpl), $info);
         }
 
