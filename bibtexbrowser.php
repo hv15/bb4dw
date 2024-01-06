@@ -1521,9 +1521,7 @@ class BibEntry {
         $res[] = trim($array[$i]);
       }
     }
-    if (!preg_match('/\}/',latex2html($array[count($array)-1],false))) {
-        $res[] = trim($array[count($array)-1]);
-    }
+    $res[] = trim($array[count($array)-1]);
     return $res;
   }
 
@@ -2717,8 +2715,13 @@ function makeHref($query = NULL) {
  */
 function splitFullName($author){
     $author = trim($author);
+    // the author is unsplittable, treat it as lastname
+    if (strpos($author, '}') !== false) {
+        $lastname = preg_replace(['/\{/', '/\}/'], '', $author);
+        $firstname = '';
+    }
     // the author format is "Joe Dupont"
-    if (strpos($author,',')===false) {
+    else if (strpos($author,',')===false) {
       $parts=explode(' ', $author);
       // get the last name
       $lastname = array_pop($parts);

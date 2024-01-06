@@ -21,6 +21,7 @@ use dokuwiki\File\PageResolver;
  */
 $_GET['library'] = 1; // cause BibBrowser to run in 'library' mode
 define('BIBTEXBROWSER_BIBTEX_LINKS', false); // disable links back to bibtex
+define('USE_FIRST_THEN_LAST', true); // ensure that author names are consistently ordered
 
 class syntax_plugin_bb4dw extends SyntaxPlugin
 {
@@ -82,28 +83,43 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
 
             // get all entries and sort (internally the default is by year)
             $data['raw'] = $db->getEntries();
-            uasort($data['raw'], 'compare_bib_entries');
-
-            $groupby_func = '';
-            switch($data['config']['groupby']) {
-                case 'year':
-                    $groupby_func = 'getYear';
-                    break;
-                default:
-                    msg('Unknown groupby passed!', -1);
-                    die();
-                    break;
-            }
+            //uasort($data['raw'], 'compare_bib_entries');
 
             foreach ($data['raw'] as $entry) {
-                $groupby = $entry->$groupby_func();
+                // we decouple the read in fields from the bibbrowser library
+                // we format authors into consistent state
+                $_tmp_entryfields = $entry->getFields();
+                $_tmp_entryfields['author'] = $entry->getFormattedAuthorsString();
+
+                switch($data['config']['groupby']) {
+                    case 'none':
+                        $groupby = 'none';
+                        break;
+                    case 'author':
+                        $_authors = $entry->getRawAuthors();
+                        $groupby = mb_substr($entry->getLastName($_authors[0]), 0, 1);
+                        break;
+                    case 'title':
+                        $groupby = mb_substr($entry->getTitle(), 0, 1);
+                        break;
+                    case 'year':
+                        $groupby = $entry->getYear();
+                        break;
+                    default:
+                        msg('Unknown groupby `'.$data['config']['groupby'].'` passed!', -1);
+                        $data['error'] = true;
+                        break 2;
+                }
+
+                // ensure that we don't append to null array
                 if (empty($data['groups'][$groupby]))
-                    $data['groups'][$groupby] = [$entry->getFields()];
+                    $data['groups'][$groupby] = [$_tmp_entryfields];
                 else
-                    $data['groups'][$groupby][] = $entry->getFields();
+                    $data['groups'][$groupby][] = $_tmp_entryfields;
             }
 
-            if ($data['config']['order'] == 'newest')
+            ksort($data['groups']);
+            if ($data['config']['order'] == 'newest' || $data['config']['order'] == 'descending')
                 $data['groups'] = array_reverse($data['groups'], true);
         }
 
