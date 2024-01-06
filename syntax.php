@@ -111,8 +111,9 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
             foreach ($data['raw'] as $entry) {
                 // we decouple the read in fields from the bibbrowser library
                 // we format authors into consistent state
-                $_tmp_entryfields = $entry->getFields();
-                $_tmp_entryfields['author'] = $entry->getFormattedAuthorsString();
+                $_tmp_entry = $entry->getFields();
+                $_tmp_entry['author'] = $entry->getFormattedAuthorsString();
+                $_tmp_entry['bibtex'] = $entry->getText();
 
                 switch($data['config']['groupby']) {
                     case 'none':
@@ -136,11 +137,12 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
 
                 // ensure that we don't append to null array
                 if (empty($data['groups'][$groupby]))
-                    $data['groups'][$groupby] = [$_tmp_entryfields];
+                    $data['groups'][$groupby] = [$_tmp_entry];
                 else
-                    $data['groups'][$groupby][] = $_tmp_entryfields;
+                    $data['groups'][$groupby][] = $_tmp_entry;
             }
 
+            // ensure that the groups are sorted and in the specified order
             ksort($data['groups']);
             if ($data['config']['order'] == 'newest' || $data['config']['order'] == 'descending')
                 $data['groups'] = array_reverse($data['groups'], true);
