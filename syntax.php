@@ -62,6 +62,7 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
                          'usegroup' => true,
                          'groupby' => 'year', # call also be 'none', 'author', or 'title'
                          'order' => 'newest',
+                         'globalkey' => 'all',
                          'filter' => []], # or 'descending'
         ];
 

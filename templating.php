@@ -45,7 +45,7 @@ class BB4DWTemplating
 
         // FIXME globalcount is currently not used
         $result = preg_replace(['/@globalcount@/', '/@globalgroupcount@/', '/@globalkey@/'],
-                               [0, count($groups), $data['config']['groupby']], $result);
+                               [0, count($groups), $data['config']['globalkey']], $result);
 
         if ($data['config']['usegroup']) {
             $pattern = '/@\{group@(.*?)@\}group@/s';
