@@ -132,10 +132,9 @@ class BB4DWTemplating
         $replacements = [];
 
         foreach ($entryfields as $key => $value) {
-            //if ( $key === 'author' ) {
-            //    $value = $entry['niceauthor'];
-            //    $value = $this->authorlink($value);
-            //}
+            if ($key === 'author') {
+                $value = $entry['niceauthor'];
+            }
             $patterns[] = '/@'.$key.'@/';
             $replacements[] = $value;
         }

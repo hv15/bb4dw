@@ -58,10 +58,11 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
             'bibtex' => [],
             'template' => [],
             'raw' => [],
-            'config' => ['target' => 'dokuwiki',
+            'config' => ['target' => 'dokuwiki', # XXX likely we won't be able to support anything else!
                          'usegroup' => true,
                          'groupby' => 'year', # call also be 'none', 'author', or 'title'
-                         'order' => 'newest'], # or 'descending'
+                         'order' => 'newest',
+                         'filter' => []], # or 'descending'
         ];
 
         // parse the bb4dw plugin pattern
@@ -83,7 +84,7 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
                     $optparts[2] = explode(';', $optparts[2]);
                     $option = array();
                     foreach ($optparts[2] as $single) {
-                        $single = explode('=', $single);
+                        $single = explode(':', $single);
                         if (count($single) == 1 && count($optparts[2]) == 1) {
                             $option = $single[0];
                         }
@@ -112,8 +113,26 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
                 // we decouple the read in fields from the bibbrowser library
                 // we format authors into consistent state
                 $_tmp_entry = $entry->getFields();
-                $_tmp_entry['author'] = $entry->getFormattedAuthorsString();
+                $_tmp_entry['niceauthor'] = $entry->getFormattedAuthorsString();
                 $_tmp_entry['bibtex'] = $entry->getText();
+
+                $keep = true;
+                foreach ($data['config']['filter'] as $field => $regexp) {
+                    if (!empty($_tmp_entry[$field])) {
+                        $val = $field === 'author'
+                            ? $_tmp_entry['niceauthor']
+                            : $_tmp_entry[$field];
+
+                        $keep = $keep && preg_match('/'.$regexp.'/i', $val);
+                    }
+                    else
+                        $keep = false;
+
+                }
+                if (!$keep) {
+                    unset($_tmp_entry);
+                    continue;
+                }
 
                 switch($data['config']['groupby']) {
                     case 'none':
@@ -186,8 +205,6 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
      */
     private function retrieve_resource(string $type, string $ref, bool $path = false): string
     {
-        global $INFO;
-
         $res = '';
 
         switch ($type)
