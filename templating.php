@@ -118,6 +118,12 @@ class BB4DWTemplating
     private function process_tpl_entry(array $entryfields, string $tpl): string {
         $result = $tpl;
 
+        // XXX bib2tpl template uses `entrykey` for Bibtex `key`, here we manually
+        //     replace this rather than adding an additional field into the entry array.
+        $result = preg_replace(['/@entrykey@/'],
+                               [$entryfields['key']],
+                               $result);
+
         // Resolve all conditions
         $result = $this->resolve_conditions($entryfields, $result);
 
