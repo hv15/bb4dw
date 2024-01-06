@@ -5,6 +5,4 @@
  * @author Hans-Nikolai Viessmann <hans@viess.mn>
  */
 
-
-//$meta['fixme'] = array('string');
-
+$meta['cache'] = array('onoff');

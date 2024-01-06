@@ -5,5 +5,4 @@
  * @author Hans-Nikolai Viessmann <hans@viess.mn>
  */
 
-//$conf['fixme']    = 'FIXME';
-
+$conf['cache'] = 0;

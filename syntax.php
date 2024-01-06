@@ -156,7 +156,7 @@ class syntax_plugin_bb4dw extends SyntaxPlugin
         if ($mode !== 'xhtml') return false;
 
         // activate caching of results
-        $renderer->info['cache'] = 0;
+        $renderer->info['cache'] = $this->getConf('cache');
 
         $tpl = $this->retrieve_resource($data['template']['type'], $data['template']['ref']);
 
