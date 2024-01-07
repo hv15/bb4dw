@@ -133,7 +133,7 @@ class BB4DWTemplating
 
         foreach ($entryfields as $key => $value) {
             if ($key === 'author') {
-                $value = $entry['niceauthor'];
+                $value = $entryfields['niceauthor'];
             }
             $patterns[] = '/@'.$key.'@/';
             $replacements[] = $value;
