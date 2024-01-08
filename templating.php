@@ -5,10 +5,10 @@
  * @license GPL 2 http://www.gnu.org/licenses/gpl-2.0.html
  * @author Hans-Nikolai Viessmann <hans@viess.mn>
  *
- * This class is based upon the wirking in the deprecated publistf plugin
- * and the bib2tpl (https://github.com/reitzig/bib2tpl) project. We make use
- * of the exactly the same templating mechanism, specifically how conditionals
- * are structured and parsed.
+ * This class is based upon the work found in the deprecated publistf plugin
+ * and the bib2tpl (https://github.com/reitzig/bib2tpl) project and provides
+ * a fully compatible re-implementation of templating mechanisms. This includes
+ * special tokens, conditionals, and general parsing.
  *
  * At its core, this class resolves a template of the format:
  *
@@ -26,6 +26,21 @@
  * (at) symbols, these either (i) refer to context specific values, or (ii) to
  * values stored within the entry, in our case Bibtex.
  *
+ * Special tokens are available that give the template writer access to additional
+ * information:
+ *
+ *   * `@globalcount@`: represents the total number of entries across all groups,
+ *                      note that entries can be repeated across multiple groups.
+ *   * `@globalgroupcount@`: represents the total number of groups.
+ *   * `@globalkey@`: unique key or label that can be used to template the same
+ *                    groups multiple times, but ensure that each set of groups
+ *                    can be handled separately. This is especially useful for
+ *                    HTML and Javascript interplay.
+ *   * `@groupkey@`: unique key or label per group
+ *   * `@groupcount@`: total number of entries in the group
+ *   * `@groupid@`: unique id or index per group
+ *   * `@entrykey@`: this is the Bibtex entry key
+ *
  * **Note that tokens which exist in neither case are left untouched and appear in
  * the output!**
  */
@@ -39,7 +54,7 @@ class BB4DWTemplating
      * @param array $data Array containing *groups* and *config* values
      * @return string The processed template with all tokens replaced
      */
-    function process_template(string $tpl, array $data): string {
+    public function process_template(string $tpl, array $data): string {
         $groups = $data['groups'];
         $result = $tpl;
 
@@ -80,9 +95,6 @@ class BB4DWTemplating
     private function process_tpl_group(string $groupkey, int $id, array $group, string $tpl): string {
         $result = $tpl;
 
-        //if ( $this->options['group'] === 'entrytype' ) {
-        //    $key = $this->options['lang']['entrytypes'][$key];
-        //}
         $result = preg_replace(['/@groupkey@/', '/@groupid@/', '/@groupcount@/'],
                                [$groupkey, $id, count($group)],
                                $result);
@@ -94,7 +106,7 @@ class BB4DWTemplating
         preg_match($pattern, $result, $entry_tpl);
 
         // For all occurrences of an entry template
-        while ( !empty($entry_tpl) ) {
+        while (!empty($entry_tpl)) {
             // Translate all entries
             $entries_res = '';
             foreach ($group as $entryfields) {
@@ -144,6 +156,9 @@ class BB4DWTemplating
 
     /**
      * This function eliminates conditions in template parts.
+     *
+     * It is almost exact copy of the function `resolve_conditions` from
+     * `bib2tpl/bibtex_converter.php`.
      *
      * @param array entry Entry with respect to which conditions are to be
      *                    solved.
