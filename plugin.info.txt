@@ -1,7 +1,7 @@
 base   bb4dw
 author Hans-Nikolai Viessmann
 email  hans@viess.mn
-date   2023-12-31
+date   2025-03-23
 name   bb4dw plugin
 desc   Create publication lists from Bibtex using BibtexBrowser
 url    https://www.dokuwiki.org/plugin:bb4dw
